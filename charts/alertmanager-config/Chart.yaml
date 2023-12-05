@@ -1,0 +1,7 @@
+apiVersion: v2
+name: alertmanager-config
+description: Create namespaced Alertmanager receivers and routes with AlertmanagerConfig objects.
+version: 1.0.0
+maintainers:
+  - email: 79476307+eevdev@users.noreply.github.com
+    name: Eivind Valderhaug

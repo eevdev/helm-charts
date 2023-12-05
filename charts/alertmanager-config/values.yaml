@@ -1,0 +1,151 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+
+nameOverride: ""
+fullnameOverride: ""
+
+labels:
+
+# NOTE: the parameter names for AlertmanagerConfig objects are slightly different than in regular Alertmanager config
+# See docs:
+#   AlertmanagerConfig: https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1alpha1.AlertmanagerConfig
+alertmanagerConfig:
+  receivers:
+    void: {} # creates a null-receiver
+    # default:
+    #   slackConfigs:
+    #   - channel: '<channel name or id>'
+    # critical:
+    #   # enabled: false
+    #   slackConfigs:
+    #   - channel: '<channel name or id>'
+    #   pagerdutyConfigs:
+    #   - enabled: true # relies on default values from receiverDefaults.pagerdutyConfigs for configuration
+    #   - inheritDefaults: false # disable inheritance from receiverDefaults to create config from scratch
+    #     serviceKey:
+    #       name: pagerduty
+    #       key: token
+  route:
+    receiver: default
+    groupBy:
+    - alertname
+    - namespace
+    - severity
+    groupWait: 10s
+    groupInterval: 5m
+    repeatInterval: 3h
+    routes: # routes can be a list for simplicity or dict for extensibility
+  # example list:
+  #     - receiver: void
+  #       matchers:
+  #       - name: alertname
+  #         matchType: "="
+  #         value: InfoInhibitor
+  # example dict:
+  #     critical:
+  #       enabled: false
+  #       order: 0
+  #       matchers:
+  #       - name: severity
+  #         matchType: "="
+  #         value: critical
+  #       receiver: critical
+  #     infoInhibitor:
+  #       order: 1
+  #       matchers:
+  #       - name: alertname
+  #         matchType: "="
+  #         value: InfoInhibitor
+  #       receiver: void
+
+# Whether ordered routes (containing order field) are put before routes without this field.
+# The order field is only relevant if you use a dict/map, which is unordered, for alertmanagerConfig.route.routes.
+prioritizeOrderedRoutes: true
+
+# References:
+#   Receiver API reference: https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1alpha1.Receiver
+#   Receiver integration settings: https://prometheus.io/docs/alerting/latest/configuration/
+#   Notification Template Reference: https://prometheus.io/docs/alerting/latest/notifications/
+#   Default Alertmanager templates: https://github.com/prometheus/alertmanager/blob/main/template/default.tmpl
+receiverDefaults:
+  # discordConfigs:
+  #   httpConfig: {}
+  # emailConfigs:
+  #   httpConfig: {}
+  # msteamsConfigs:
+  #   httpConfig: {}
+  # opsgenieConfigs:
+  #   httpConfig: {}
+  # pagerdutyConfigs: # https://developer.pagerduty.com/docs/ZG9jOjExMDI5NTgx-send-an-alert-event
+  #   class: '{{ .CommonLabels.alertname }}'
+  #   component: '{{ with .CommonLabels }}{{ or .name .service .deployment .pod }}{{ end }}'
+  #   description: '{{ with .CommonAnnotations }}{{ or .description .summary }}{{ end }}'
+  #   details:
+  #     firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+  #     resolved: '{{ template "pagerduty.default.instances" .Alerts.Resolved }}'
+  #     num_firing: '{{ .Alerts.Firing | len }}'
+  #     num_resolved: '{{ .Alerts.Resolved | len }}'
+  #     k8s_cluster: '{{ .CommonLabels.cluster }}'
+  #     namespace: '{{ .CommonLabels.namespace }}'
+  #     summary: '{{ .CommonAnnotations.summary }}'
+  #   group: '{{ .CommonLabels.namespace }}'
+  #   httpConfig: {}
+  #   links:
+  #   - href: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+  #     text: Runbook
+  #   - href: '{{ (index .Alerts 0).GeneratorURL }}'
+  #     text: Query
+  #   - href: '{{ (index .Alerts 0).Annotations.dashboard_url }}'
+  #     text: Dashboard
+  #   - href: '{{ (index .Alerts 0).Annotations.log_url }}'
+  #     text: Log
+  #   - href: '{{ template "__alert_silence_link" . }}'
+  #     text: Silence
+  #   # depending on the PagerDuty integration type, use either routingKey for Events API v2 or serviceKey for integration type "Prometheus"
+  #   routingKey:
+  #     key: token
+  #     name: pagerduty
+  #   # serviceKey:
+  #   #   key: token
+  #   #   name: pagerduty
+  #   severity: '{{ or .CommonLabels.severity "critical" | toLower }}' # https://support.pagerduty.com/docs/dynamic-notifications#eventalert-severity-levels
+  # slackConfigs: # https://api.slack.com/messaging/composing/layouts#building-attachments
+  #   actions:
+  #   - text: "Runbook :green_book:"
+  #     type: button
+  #     url: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+  #   - text: "Query :mag:"
+  #     type: button
+  #     url: '{{ (index .Alerts 0).GeneratorURL }}'
+  #   - text: "Dashboard :chart_with_upwards_trend:"
+  #     type: button
+  #     url: '{{ (index .Alerts 0).Annotations.dashboard_url }}'
+  #   - text: "Log :notebook:"
+  #     type: button
+  #     url: '{{ (index .Alerts 0).Annotations.log_url }}'
+  #   - text: "Silence :no_bell:"
+  #     type: button
+  #     url: '{{ template "__alert_silence_link" . }}'
+  #   # apiURL:
+  #   #   key: api-url # secret should contain webhook url or https://slack.com/api/chat.postMessage if using bot token (see also slackApiUrl in global config - https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1.AlertmanagerGlobalConfig)
+  #   #   name: alertmanager-slack
+  #   # httpConfig:
+  #   #   authorization:
+  #   #     type: Bearer
+  #   #     credentials:
+  #   #       key: bot-token
+  #   #       name: alertmanager-slack
+  #   sendResolved: true
+  # pushoverConfigs:
+  #   httpConfig: {}
+  # snsConfigs:
+  #   httpConfig: {}
+  # telegramConfigs:
+  #   httpConfig: {}
+  # victoropsConfigs:
+  #   httpConfig: {}
+  # webexConfigs:
+  #   httpConfig: {}
+  # webhookConfigs:
+  #   httpConfig: {}
+  # wechatConfigs:
+  #   httpConfig: {}
