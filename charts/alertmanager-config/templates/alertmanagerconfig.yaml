@@ -4,6 +4,10 @@ metadata:
   name: {{ include "alertmanager-config.fullname" . }}
   labels:
     {{- include "alertmanager-config.labels" . | nindent 4 }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
 {{- with (omit .Values.alertmanagerConfig "receivers" "route") }}
   {{- toYaml . | nindent 2 }}

@@ -4,7 +4,7 @@ _Warning: the AlertmanagerConfig CRD from Prometheus Operator is not yet stable 
 
 Specify behavior of Alertmanager with the [AlertmanagerConfig](https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1alpha1.AlertmanagerConfig) CRD from Prometheus Operator.
 
-This chart makes it easy to provide common default configs while allowing flexibility to override those defaults.
+This chart makes it easy to provide common default configs while allowing flexibility to override those defaults for example per namespace. It can also generate Alertmanager templates to be used by a global [AlertmanagerConfiguration](https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1.AlertmanagerConfiguration) (enable with `alertmanagerTemplates.enabled`).
 
 Note: The configuration is scoped to the AlertmanagerConfig namespace; receivers and routes will automatically get a name prefix to avoid conflicts with receivers and routes configured elsewhere. Please see the related configuration options for Alertmanager and Prometheus.
 
@@ -42,7 +42,7 @@ To support routes as dicts, which are unordered (ie. items will not be in a pred
 
 Note: The `order` field is sorted using the built-in Helm function sortAlpha because there doesn't seem to be a numeric sorting function available in Helm.
 
-### Example
+### Examples
 `values.yaml`:
 ```yaml
 labels:
@@ -85,4 +85,20 @@ receiverDefaults:
           key: bot-token
           name: alertmanager-slack
     sendResolved: true
+```
+
+Enable templates ConfigMap for global Alertmanager config:
+```yaml
+alertmanagerTemplates:
+  enabled: true
+  # templatesEnabledByDefault: false # disable all predefined templates to start from scratch with your own
+  # slack:
+  #   enabled: false # disable individual templates
+  # example custom template, myCustomTemplates will be the key for this template in the generated ConfigMap:
+  myCustomTemplates:
+    enabled: true
+    templateString: |-
+      {{- define "myCustomTemplates.example" -}}
+        {{/* my custom templates */}}
+      {{- end -}}
 ```

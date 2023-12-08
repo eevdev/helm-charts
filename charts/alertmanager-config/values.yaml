@@ -4,6 +4,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 labels:
+annotations:
 
 # NOTE: the parameter names for AlertmanagerConfig objects are slightly different than in regular Alertmanager config
 # See docs:
@@ -24,6 +25,15 @@ alertmanagerConfig:
     #     serviceKey:
     #       name: pagerduty
     #       key: token
+    # deadmanssnitch:
+    #   enabled: false
+    #   webhookConfigs:
+    #   - urlSecret:
+    #       key: url
+    #       name: deadmanssnitch
+    # slack:
+    #   slackConfigs:
+    #     - channel: '{{ index ((index .Alerts 0).Labels) "slack_channel" }}'
   route:
     receiver: default
     groupBy:
@@ -49,13 +59,29 @@ alertmanagerConfig:
   #         matchType: "="
   #         value: critical
   #       receiver: critical
-  #     infoInhibitor:
+  #     watchdog:
+  #       enabled: false # typically enabled for global config
   #       order: 1
+  #       matchers:
+  #       - name: alertname
+  #         matchType: "="
+  #         value: Watchdog
+  #       receiver: void # eg. "deadmanssnitch" for global production config
+  #       repeatInterval: 1m
+  #     infoInhibitor:
+  #       order: 2
   #       matchers:
   #       - name: alertname
   #         matchType: "="
   #         value: InfoInhibitor
   #       receiver: void
+  #     slack:
+  #       order: 3
+  #       matchers:
+  #       - name: slack_channel
+  #         matchType: "=~"
+  #         value: ^#?[a-z0-9._-]+$
+  #       receiver: slack
 
 # Whether ordered routes (containing order field) are put before routes without this field.
 # The order field is only relevant if you use a dict/map, which is unordered, for alertmanagerConfig.route.routes.
@@ -78,27 +104,26 @@ receiverDefaults:
   # pagerdutyConfigs: # https://developer.pagerduty.com/docs/ZG9jOjExMDI5NTgx-send-an-alert-event
   #   class: '{{ .CommonLabels.alertname }}'
   #   component: '{{ with .CommonLabels }}{{ or .name .service .deployment .pod }}{{ end }}'
-  #   description: '{{ with .CommonAnnotations }}{{ or .description .summary }}{{ end }}'
   #   details:
   #     firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
   #     resolved: '{{ template "pagerduty.default.instances" .Alerts.Resolved }}'
   #     num_firing: '{{ .Alerts.Firing | len }}'
   #     num_resolved: '{{ .Alerts.Resolved | len }}'
-  #     k8s_cluster: '{{ .CommonLabels.cluster }}'
-  #     namespace: '{{ .CommonLabels.namespace }}'
-  #     summary: '{{ .CommonAnnotations.summary }}'
+  #     # k8s_cluster: '{{ .CommonLabels.cluster }}'
+  #     # namespace: '{{ .CommonLabels.namespace }}'
+  #     # summary: '{{ .CommonAnnotations.summary }}'
   #   group: '{{ .CommonLabels.namespace }}'
   #   httpConfig: {}
   #   links:
-  #   - href: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+  #   - href: '{{ template "url.runbook" . }}'
   #     text: Runbook
-  #   - href: '{{ (index .Alerts 0).GeneratorURL }}'
+  #   - href: '{{ template "url.query" . }}'
   #     text: Query
-  #   - href: '{{ (index .Alerts 0).Annotations.dashboard_url }}'
+  #   - href: '{{ template "url.dashboard" . }}'
   #     text: Dashboard
-  #   - href: '{{ (index .Alerts 0).Annotations.log_url }}'
+  #   - href: '{{ template "url.log" . }}'
   #     text: Log
-  #   - href: '{{ template "__alert_silence_link" . }}'
+  #   - href: '{{ template "url.silence" . }}'
   #     text: Silence
   #   # depending on the PagerDuty integration type, use either routingKey for Events API v2 or serviceKey for integration type "Prometheus"
   #   routingKey:
@@ -107,24 +132,25 @@ receiverDefaults:
   #   # serviceKey:
   #   #   key: token
   #   #   name: pagerduty
-  #   severity: '{{ or .CommonLabels.severity "critical" | toLower }}' # https://support.pagerduty.com/docs/dynamic-notifications#eventalert-severity-levels
+  #   severity: '{{ or .CommonLabels.severity "error" | toLower }}' # https://support.pagerduty.com/docs/dynamic-notifications#eventalert-severity-levels
   # slackConfigs: # https://api.slack.com/messaging/composing/layouts#building-attachments
   #   actions:
   #   - text: "Runbook :green_book:"
   #     type: button
-  #     url: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+  #     url: '{{ template "url.runbook" . }}'
   #   - text: "Query :mag:"
   #     type: button
-  #     url: '{{ (index .Alerts 0).GeneratorURL }}'
+  #     url: '{{ template "url.query" . }}'
   #   - text: "Dashboard :chart_with_upwards_trend:"
   #     type: button
-  #     url: '{{ (index .Alerts 0).Annotations.dashboard_url }}'
+  #     url: '{{ template "url.dashboard" . }}'
   #   - text: "Log :notebook:"
   #     type: button
-  #     url: '{{ (index .Alerts 0).Annotations.log_url }}'
+  #     url: '{{ template "url.log" . }}'
   #   - text: "Silence :no_bell:"
   #     type: button
-  #     url: '{{ template "__alert_silence_link" . }}'
+  #     url: '{{ template "url.silence" . }}'
+  #   color: '{{ template "slack.color" . }}'
   #   # apiURL:
   #   #   key: api-url # secret should contain webhook url or https://slack.com/api/chat.postMessage if using bot token (see also slackApiUrl in global config - https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1.AlertmanagerGlobalConfig)
   #   #   name: alertmanager-slack
@@ -149,3 +175,87 @@ receiverDefaults:
   #   httpConfig: {}
   # wechatConfigs:
   #   httpConfig: {}
+
+alertmanagerTemplates:
+  enabled: false
+  templatesEnabledByDefault: true
+  # <custom template name>:
+  #   enabled: true
+  #   templateString: |-
+  #     {{/* my custom templates */}}
+  #   # includeHelmTemplate: true # include Helm template "alertmanager-config.templates.<custom template name>" (only relevant if extending this chart)
+  pagerduty:
+    # enabled: true # overrides templatesEnabledByDefault
+    templateString: |-
+      {{- define "pagerduty.default.description" -}}
+        {{- with .CommonAnnotations }}{{ or .summary .description }}{{ end -}}
+      {{- end -}}
+  slack:
+    # enabled: true # overrides templatesEnabledByDefault
+    templateString: |-
+      {{- define "slack.color" -}}
+        {{- if eq .Status "firing" -}}
+          {{- if eq .CommonLabels.severity "critical" -}}
+            danger
+          {{- else if eq .CommonLabels.severity "warning" -}}
+            warning
+          {{- else -}}
+            #439FE0
+          {{- end -}}
+        {{- else -}}
+          good
+        {{- end -}}
+      {{- end -}}
+      {{- /* Override default Slack templates. */}}
+      {{- define "slack.default.text" -}}
+        *Severity:* `{{ .CommonLabels.severity | title }}`
+        {{- if .CommonLabels.cluster -}}
+        {{- "\n" -}}
+        *Cluster:* {{ .CommonLabels.cluster }}
+        {{- end -}}
+        {{- if (index .Alerts 0).Annotations.summary -}}
+        {{- "\n" -}}
+        *Summary:* {{ (index .Alerts 0).Annotations.summary -}}
+        {{- end -}}
+        {{- range .Alerts -}}
+          {{- if .Annotations.description -}}
+          {{- "\n" -}}
+          {{- .Annotations.description -}}
+          {{- "\n" -}}
+          {{- end -}}
+          {{- if .Annotations.message -}}
+          {{- "\n" -}}
+          {{- .Annotations.message -}}
+          {{- "\n" -}}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+      {{- define "slack.default.title" -}}
+      [{{ .Status | toUpper -}}
+      {{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{- end -}}
+      ] {{ .CommonLabels.alertname }}
+      {{- end -}}
+  url:
+    # enabled: true # overrides templatesEnabledByDefault
+    templateString: |-
+      {{- define "url.dashboard" -}}
+        {{- (index .Alerts 0).Annotations.dashboard_url -}}
+      {{- end -}}
+      {{- define "url.log" -}}
+        {{- (index .Alerts 0).Annotations.log_url -}}
+      {{- end -}}
+      {{- define "url.query" -}}
+        {{- (index .Alerts 0).GeneratorURL -}}
+      {{- end -}}
+      {{- define "url.runbook" -}}
+        {{- (index .Alerts 0).Annotations.runbook_url -}}
+      {{- end -}}
+      {{- define "url.silence" -}}
+        {{- .ExternalURL }}/#/silences/new?filter=%7B
+        {{- range .CommonLabels.SortedPairs -}}
+          {{- if ne .Name "alertname" -}}
+            {{- .Name }}%3D"{{- .Value -}}"%2C%20
+          {{- end -}}
+        {{- end -}}
+        alertname%3D"{{- .CommonLabels.alertname -}}"%7D
+      {{- end -}}
