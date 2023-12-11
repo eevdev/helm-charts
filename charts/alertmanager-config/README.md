@@ -58,7 +58,7 @@ alertmanagerConfig:
       pagerdutyConfigs:
       - routingKey:
           key: token
-          name: pagerduty
+          name: alertmanager-pagerduty
   route:
     routes:
       critical:

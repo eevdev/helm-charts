@@ -23,14 +23,14 @@ alertmanagerConfig:
     #   - enabled: true # relies on default values from receiverDefaults.pagerdutyConfigs for configuration
     #   - inheritDefaults: false # disable inheritance from receiverDefaults to create config from scratch
     #     serviceKey:
-    #       name: pagerduty
     #       key: token
+    #       name: alertmanager-pagerduty
     # deadmanssnitch:
     #   enabled: false
     #   webhookConfigs:
     #   - urlSecret:
     #       key: url
-    #       name: deadmanssnitch
+    #       name: alertmanager-deadmanssnitch
     # slack:
     #   slackConfigs:
     #     - channel: '{{ index ((index .Alerts 0).Labels) "slack_channel" }}'
@@ -128,10 +128,10 @@ receiverDefaults:
   #   # depending on the PagerDuty integration type, use either routingKey for Events API v2 or serviceKey for integration type "Prometheus"
   #   routingKey:
   #     key: token
-  #     name: pagerduty
+  #     name: alertmanager-pagerduty
   #   # serviceKey:
   #   #   key: token
-  #   #   name: pagerduty
+  #   #   name: alertmanager-pagerduty
   #   severity: '{{ or .CommonLabels.severity "error" | toLower }}' # https://support.pagerduty.com/docs/dynamic-notifications#eventalert-severity-levels
   # slackConfigs: # https://api.slack.com/messaging/composing/layouts#building-attachments
   #   actions:
