@@ -5,8 +5,7 @@ Example of global Alertmanager config for the [kube-prometheus-stack](https://gi
 fullnameOverride: alertmanager-global-config
 alertmanagerConfig: # https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1alpha1.AlertmanagerConfigSpec
   receivers:
-    default:
-      # ...
+    default: {} # replace with proper default receiver
   route:
     receiver: default
     groupBy:
@@ -16,6 +15,14 @@ alertmanagerConfig: # https://prometheus-operator.dev/docs/operator/api/#monitor
     groupWait: 10s
     groupInterval: 5m
     repeatInterval: 3h
+    routes:
+      watchdog:
+        matchers:
+        - name: alertname
+          matchType: "="
+          value: Watchdog
+        receiver: void # eg. "deadmanssnitch" for global production config
+        repeatInterval: 1m
 alertmanagerTemplates:
   enabled: true # creates ConfigMap with templates
 ```
